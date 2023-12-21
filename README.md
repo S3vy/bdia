@@ -1,5 +1,6 @@
 # bdia
-TP Centrale Nantes INFOIA test et qualités
+TP Centrale Nantes INFOIA GPGPU
+Comment compiler : gcc *.c -lm
 
 1. Introduction (enjeu TP)
 2. Analyse du code séquentiel (prototype et algorithme des fonctions)
