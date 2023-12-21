@@ -20,3 +20,8 @@ Comment compiler : gcc *.c -lm
     --> analyser l'impact de chaque modification sur les performances globales
 8. Performances comparées des différentes stratégies entre elles et avec le code séquentiel
 9. Conclusion
+
+# Réflexion au fur et à mesure du projet :
+
+## Utiliser la mémoire unifiée
+Cela permet de ne pas se faire chier avec les allocations de mémoire de partout
