@@ -27,9 +27,61 @@ Utiliser cublas : nvcc tests_antho.cu -lcublas
 ## Utiliser la mémoire unifiée
 Cela permet de ne pas se faire chier avec les allocations de mémoire de partout
 
-# Performances du code séquentiel
+# Analyse du code séquentiel
 
-## Résultats du profilage avec gprof
+## Structure du code séquentiel
+
+La formulation algorithmique du problème résolu par l'ensemble du code est détaillée dans le sujet du TP.
+On rappelle ici le prototype des fonctions qui composent le code et la structure du main.c.
+
+### Liste des librairies requises
+
+<stdlib.h>  : gestion mémoire dynamique, environnement et processus, fonctions de manipulation chaîne/nombre, tri, recherche
+<stdio.h>   : fonctions lecture clavier, écriture console, manipulation de fichiers et opérations d'entrée/sortie standard
+<assert.h>  : macros pour effectuer des assertions
+<stdbool.h> : utilisation des variables booléennes et opérations logiques
+<stdint.h>  : fournit des types entiers de largeurs fixes
+<math.h>    : opérations mathématiques courantes
+<string.h>  : fonctions pour la manipulation de chaînes de caractères
+<time.h>    : manipulation, formatage et mesure du temps d'exécution des programmes
+
+### Récapitulatif des prototype de l'ensemble des fonctions
+
+%% Fonctions utilitaires pour le formatage du dataset train/test
+uint32_t    make_uint32(byte buffer[]);
+byte *      read_labels(const char filename[], unsigned* n );
+image *     read_images(const char filename[], unsigned* n );
+
+%% Fonctions utilitaires pour le calcul matriciel
+matrix_t *  alloc_matrix(unsigned rows, unsigned columns);
+void        destroy_matrix(matrix_t *m);
+void        print_matrix(matrix_t *m, bool is_short);
+void        hadamard_product(matrix_t *m1, matrix_t *m2, matrix_t *res);
+void        matrix_sum(matrix_t *m1, matrix_t *m2, matrix_t *res);
+void        matrix_minus(matrix_t *m1, matrix_t *m2, matrix_t *res);
+void        matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res);
+void        matrix_function(matrix_t *m1, double (*f)(double), matrix_t *res);
+void        matrix_transpose(matrix_t *m1, matrix_t *res);
+void        matrix_scalar(matrix_t *m1, double s, matrix_t *res);
+void        matrix_memcpy(matrix_t *dest, const matrix_t *src);
+
+%% Fonctions utilitaires pour la manipulation des réseaux de neurones
+% Fonction de déclaration d'un objet réseau de neurones
+ann_t *     create_ann(double alpha, unsigned minibatch_size, unsigned number_of_layers, unsigned* nneurons_per_layer);
+Fonction de définition d'un objet couche du réseau de neurones
+layer_t *   create_layer(unsigned l, unsigned number_of_neurons, unsigned nneurons_previous_layer, unsigned minibatch_size);
+% Fonction de déclaration du vecteur d'entrée
+void        set_input(ann_t *nn, matrix_t* input);
+% Fonction d'affichage du réseau de neurones
+void        print_nn(ann_t *nn);
+% Fonction de propagation avant (calcul d'une prédiction)
+void        forward(ann_t *nn, double (*activation_function)(double));
+% Fonction de back-propagation (ajustement des paramètres)
+void        backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double));
+
+## Performances du code séquentiel
+
+### Résultats du profilage avec gprof
 
   %   cumulative   self              self     total           
  time   seconds   seconds    calls   s/call   s/call  name    
@@ -58,7 +110,7 @@ Cela permet de ne pas se faire chier avec les allocations de mémoire de partout
   0.00    284.33     0.00        2     0.00     0.00  read_labels
   0.00    284.33     0.00        1     0.00     0.01  create_ann
 
-## Identification des gisements de performance
+### Identification des gisements de performance
 
 Les résultats du profilage ci-dessous permettent d'établir une liste des gisements de performance par priorité.
 
