@@ -1,5 +1,6 @@
 # bdia
 TP Centrale Nantes INFOIA GPGPU
+
 Comment compiler : gcc *.c -lm
 
 1. Introduction (enjeu TP)
