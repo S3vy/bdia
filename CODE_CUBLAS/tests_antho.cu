@@ -45,13 +45,16 @@ int main() {
 
         float *C=b;
         int ldc=m;
-
+        
         cublasHandle_t handle;
+        
         cublasCreate(&handle);
+
         cublasStatus_t success=cublasSgeam( handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, &alpha, A, lda, &beta, B, ldb, C, ldc);
         if ( success != CUBLAS_STATUS_SUCCESS)
             printf("\33[31mError: %d \33[0m\n", success);
         cublasDestroy(handle);
+        
     }
 
     
