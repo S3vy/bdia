@@ -110,23 +110,18 @@ void matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res)
     }
 }
 
-__global__
-void matrix_dot_cuda(matrix_t *m1, matrix_t *m2, matrix_t *res)
+__global__ void matrix_dot_cuda(float *m1, float *m2, float *res, int numM1Rows, int numM1Columns, int numM2Rows, int numM2Columns)
 {
-    assert ( (m1->columns == m2->rows)  &&
-             (m1->rows == res->rows)    &&
-             (m2->columns == res->columns));
-
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     float sum = 0.0;
 
-    if (row < m1->rows && col < m2->columns) {
-        for (int i = 0; i < m1->columns; i++) {
-            sum += m1->m[i + row * m1->columns] * m2->m[col + i * m2->columns];
+    if (row < numM1Rows && col < numM2Columns) {
+        for (int i = 0; i < numM1Columns; i++) {
+            sum += m1[i + row * numM1Columns] * m2[col + i * numM2Columns];
         }
 
-        res->m[col + row * res->columns] = sum;
+        res[col + row * numM2Columns] = sum;
     }
 }
 
