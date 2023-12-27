@@ -7,6 +7,7 @@
 #include <float.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <cublas_v2.h>
 
 double normalRand(double mu, double sigma);
 void init_weight(matrix_t* w, unsigned nneurones_prev);
@@ -127,8 +128,14 @@ void forward(ann_t *nn, double (*activation_function)(double))
         for (int idx = 0; idx < one->columns*one->rows; idx++)
             one->m[idx] = 1.0;
 
-        matrix_dot(nn->layers[l]->weights, nn->layers[l-1]->activations, z1); // z1 <- w^l x a^(l-1)
-        matrix_dot(nn->layers[l]->biases, one, z2); // z2 <- b^l x 1        
+        // CPU version
+        // matrix_dot(nn->layers[l]->weights, nn->layers[l-1]->activations, z1); // z1 <- w^l x a^(l-1)
+        // matrix_dot(nn->layers[l]->biases, one, z2); // z2 <- b^l x 1
+
+        // CUBLAS version
+        matrix_dot_cublas(nn->layers[l]->weights, nn->layers[l-1]->activations, z1); // z1 <- w^l x a^(l-1)
+        matrix_dot_cublas(nn->layers[l]->biases, one, z2); // z2 <- b^l x 1
+
         matrix_sum(z1, z2, nn->layers[l]->z); // z^l <- z1 + z2 <=> z^l <- w^l x a^(l-1) + b^l x 1      
 
         matrix_function(nn->layers[l]->z, activation_function, nn->layers[l]->activations); // a^l = f(z^l)
@@ -158,8 +165,14 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         delta_tmp = alloc_matrix(nn->layers[l-1]->number_of_neurons, nn->minibatch_size);
         dfz = alloc_matrix(nn->layers[l-1]->number_of_neurons, nn->minibatch_size);
 
-        matrix_transpose(nn->layers[l]->weights, tw); // (w^l)T        
-        matrix_dot(tw, nn->layers[l]->delta, delta_tmp); // (w^l)T x delta^l
+        matrix_transpose(nn->layers[l]->weights, tw); // (w^l)T
+
+        // CPU version        
+        // matrix_dot(tw, nn->layers[l]->delta, delta_tmp); // (w^l)T x delta^l
+
+        // CUBLAS version
+        matrix_dot_cublas(tw, nn->layers[l]->delta, delta_tmp); // (w^l)T x delta^l
+        
         matrix_function(nn->layers[l-1]->z, derivative_actfunct, dfz); // f'(z^(l-1))
         hadamard_product(delta_tmp, dfz, nn->layers[l-1]->delta); // delta^(l-1) = (w^l)T x delta^l o f'(z^(l-1))
 
@@ -175,7 +188,13 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         ta = alloc_matrix(nn->minibatch_size, nn->layers[l-1]->number_of_neurons);
         
         matrix_transpose(nn->layers[l-1]->activations, ta); // ta <- (a^(l-1))^T
-        matrix_dot(nn->layers[l]->delta, ta, w1); // w1 <- delta^l x (a^(l-1))^T
+
+        // CPU version
+        // matrix_dot(nn->layers[l]->delta, ta, w1); // w1 <- delta^l x (a^(l-1))^T
+
+        // CUBLAS version
+        matrix_dot_cublas(nn->layers[l]->delta, ta, w1); // w1 <- delta^l x (a^(l-1))^T
+
         matrix_scalar(w1, nn->alpha / nn->minibatch_size, w1); // w1 <- alpha /m . delta^l x (a^(l-1))^T
         matrix_minus(nn->layers[l]->weights, w1, nn->layers[l]->weights); // w^l <- w^l - alpha /m . delta^l x (a^(l-1))^T
 
@@ -188,7 +207,12 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         for (int idx = 0; idx < one->columns*one->rows; idx++)
             one->m[idx] = 1.0;
 
-        matrix_dot(nn->layers[l]->delta, one, b1); // b1 <- delta^l x 1^T
+        // CPU version
+        // matrix_dot(nn->layers[l]->delta, one, b1); // b1 <- delta^l x 1^T
+
+        // CUBLAS version
+        matrix_dot_cublas(nn->layers[l]->delta, one, b1); // b1 <- delta^l x 1^T
+
         matrix_scalar(b1,  nn->alpha / nn->minibatch_size, b1); // b1 <- alpha / m . delta^l x 1^T
         matrix_minus(nn->layers[l]->biases, b1, nn->layers[l]->biases); // b^l = b^l - alpha / m . delta^l x 1^T
         

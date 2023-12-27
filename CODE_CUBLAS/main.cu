@@ -1,4 +1,5 @@
 // Compile gcc -o ./ann main.c matrix.c ann.c mnist.c -lm
+#include <cublas_v2.h>
 
 #include <stdbool.h>
 #include <stdio.h>

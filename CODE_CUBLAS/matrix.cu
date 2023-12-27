@@ -1,6 +1,7 @@
 #include "matrix.h"
 #include <stdlib.h>
 #include <string.h>
+#include <cublas_v2.h>
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -108,6 +109,46 @@ void matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res)
             res->m[idx] = var;
         }
     }
+}
+
+__global__
+void matrix_dot_cublas(matrix_t *m1, matrix_t *m2, matrix_t *res)
+{
+    assert ( (m1->columns == m2->rows)  &&
+             (m1->rows == res->rows)    &&
+             (m2->columns == res->columns));
+
+    // Gestion des handles cuBLAS
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+
+    // Allocation de mémoire sur le GPU
+    float *d_m1, *d_m2, *d_res;
+    cudaMalloc((void**)&d_m1, m1->rows * m1->columns * sizeof(float));
+    cudaMalloc((void**)&d_m2, m2->rows * m2->columns * sizeof(float));
+    cudaMalloc((void**)&d_res, res->rows * res->columns * sizeof(float));
+
+    // Copie des données depuis le CPU vers le GPU
+    cudaMemcpy(d_m1, m1->m, m1->rows * m1->columns * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_m2, m2->m, m2->rows * m2->columns * sizeof(float), cudaMemcpyHostToDevice);
+
+    // Définition de la configuration des blocs et des threads
+    int THREADS_PER_BLOCK = 512;
+    int numBlocks = (res->rows * res->columns + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
+
+    // Appel de la fonction cuBLAS pour le produit matriciel
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, res->columns, res->rows, m1->cols, 1.0f, d_m2, m2->columns, d_m1, m1->columns, 0.0f, d_res, res->columns);
+
+    // Copie des résultats depuis le GPU vers le CPU
+    cudaMemcpy(res->m, d_res, res->rows * res->columns * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // Libération de la mémoire sur le GPU
+    cudaFree(d_m1);
+    cudaFree(d_m2);
+    cudaFree(d_res);
+
+    // Libération du handle cuBLAS
+    cublasDestroy(handle);
 }
 
 void matrix_function(matrix_t *m1, double (*f)(double), matrix_t *res)

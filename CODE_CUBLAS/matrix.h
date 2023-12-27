@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <cublas_v2.h>
 
 typedef struct
 {
@@ -25,6 +26,8 @@ void matrix_sum(matrix_t *m1, matrix_t *m2, matrix_t *res);
 void matrix_minus(matrix_t *m1, matrix_t *m2, matrix_t *res);
 
 void matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res);
+
+void matrix_dot_cublas(matrix_t *m1, matrix_t *m2, matrix_t *res);
 
 void matrix_function(matrix_t *m1, double (*f)(double), matrix_t *res);
 
