@@ -168,8 +168,10 @@ void forward(ann_t *nn, double (*activation_function)(double))
         cudaMemcpy(d_m2, nn->layers[l-1]->activations->m, nn->layers[l-1]->activations->rows * nn->layers[l-1]->activations->columns * sizeof(float), cudaMemcpyHostToDevice);
 
         // Launch kernel
-        gridDim = (ceil(((float)nn->layers[l-1]->activations->columns) / blockDim.x), ceil(((float)nn->layers[l]->weights->rows) / blockDim.y));
+        gridDim = dim3((nn->layers[l-1]->activations->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->weights->rows + blockDim.y - 1) / blockDim.y);
         matrix_dot_cuda<<<gridDim, blockDim>>>(d_m1, d_m2, d_res, nn->layers[l]->weights->rows, nn->layers[l]->weights->columns, nn->layers[l-1]->activations->rows, nn->layers[l-1]->activations->columns); // z1 <- w^l x a^(l-1)
+
+        cudaDeviceSynchronize();
 
         // Copy from GPU memory to CPU
         cudaMemcpy(z1->m, d_res, nn->layers[l]->weights->rows * nn->layers[l-1]->activations->columns * sizeof(float), cudaMemcpyDeviceToHost);
@@ -212,8 +214,10 @@ void forward(ann_t *nn, double (*activation_function)(double))
         cudaMemcpy(d_m2, one->m, one->rows * one->columns * sizeof(float), cudaMemcpyHostToDevice);
 
         // Launch kernel
-        gridDim = (ceil(((float)one->columns) / blockDim.x), ceil(((float)nn->layers[l]->biases->rows) / blockDim.y));
+        gridDim = dim3((one->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->biases->rows + blockDim.y - 1) / blockDim.y);
         matrix_dot_cuda<<<gridDim, blockDim>>>(d_m1, d_m2, d_res, nn->layers[l]->biases->rows, nn->layers[l]->biases->columns, one->rows, one->columns); // z2 <- b^l x 1
+
+        cudaDeviceSynchronize();
 
         // Copy from GPU memory to CPU
         cudaMemcpy(z2->m, d_res, nn->layers[l]->biases->rows * one->columns * sizeof(float), cudaMemcpyDeviceToHost);
@@ -236,9 +240,9 @@ void forward(ann_t *nn, double (*activation_function)(double))
         destroy_matrix(one);
     }
 
-    free(d_m1);
-    free(d_m2);
-    free(d_res);
+    cudaFree(d_m1);
+    cudaFree(d_m2);
+    cudaFree(d_res);
 }
 
 void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
@@ -302,8 +306,10 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         cudaMemcpy(d_m2, nn->layers[l]->delta->m, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(float), cudaMemcpyHostToDevice);
 
         // Launch kernel
-        gridDim = (ceil(((float)nn->layers[l]->delta->columns) / blockDim.x), ceil(((float)tw->rows) / blockDim.y));
+        gridDim = dim3((nn->layers[l]->delta->columns + blockDim.x - 1) / blockDim.x, (tw->rows + blockDim.y - 1) / blockDim.y);
         matrix_dot_cuda<<<gridDim, blockDim>>>(d_m1, d_m2, d_res, tw->rows, tw->columns, nn->layers[l]->delta->rows, nn->layers[l]->delta->columns);
+
+        cudaDeviceSynchronize();
 
         // Copy from GPU memory to CPU
         cudaMemcpy(delta_tmp->m, d_res, tw->rows * nn->layers[l]->delta->columns * sizeof(float), cudaMemcpyDeviceToHost);
@@ -324,6 +330,10 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         destroy_matrix(delta_tmp);
         destroy_matrix(dfz);
     }
+
+    cudaFree(d_m1);
+    cudaFree(d_m2);
+    cudaFree(d_res);
 
     for (int l = 1; l < nn->number_of_layers; l++)
     {
@@ -366,8 +376,10 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         cudaMemcpy(d_m2, ta->m, ta->rows * ta->columns * sizeof(float), cudaMemcpyHostToDevice);
 
         // Launch kernel
-        gridDim = (ceil(((float)ta->columns) / blockDim.x), ceil(((float)nn->layers[l]->delta->rows) / blockDim.y));
+        gridDim = dim3((ta->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->delta->rows + blockDim.y - 1) / blockDim.y);
         matrix_dot_cuda<<<gridDim, blockDim>>>(d_m1, d_m2, d_res, nn->layers[l]->delta->rows, nn->layers[l]->delta->columns, ta->rows, ta->columns);
+
+        cudaDeviceSynchronize();
 
         // Copy from GPU memory to CPU
         cudaMemcpy(w1->m, d_res, nn->layers[l]->delta->rows * ta->columns * sizeof(float), cudaMemcpyDeviceToHost);
@@ -425,8 +437,10 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         cudaMemcpy(d_m2, one->m, one->rows * one->columns * sizeof(float), cudaMemcpyHostToDevice);
 
         // Launch kernel
-        gridDim = (ceil(((float)one->columns) / blockDim.x), ceil(((float)nn->layers[l]->delta->rows) / blockDim.y));
+        gridDim = dim3((one->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->delta->rows + blockDim.y - 1) / blockDim.y);
         matrix_dot_cuda<<<gridDim, blockDim>>>(d_m1, d_m2, d_res, nn->layers[l]->delta->rows, nn->layers[l]->delta->columns, one->rows, one->columns);
+
+        cudaDeviceSynchronize();
 
         // Copy from GPU memory to CPU
         cudaMemcpy(b1->m, d_res, nn->layers[l]->delta->rows * one->columns * sizeof(float), cudaMemcpyDeviceToHost);
@@ -447,7 +461,7 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         destroy_matrix(b1);
     }
 
-    free(d_m1);
-    free(d_m2);
-    free(d_res);
+    cudaFree(d_m1);
+    cudaFree(d_m2);
+    cudaFree(d_res);
 }
