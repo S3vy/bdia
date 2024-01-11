@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "matrix.h"
+#include <cublas_v2.h>
 
 typedef struct 
 {
