@@ -7,6 +7,9 @@
 #include <float.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "error.h"
+#include <iostream>
+using namespace std;
 
 double normalRand(double mu, double sigma);
 void init_weight(matrix_t* w, unsigned nneurones_prev);
@@ -119,12 +122,13 @@ void print_nn(ann_t *nn)
 
 void forward(ann_t *nn, double (*activation_function)(double))
 {
+    // cout << "ForwardStart" << endl;
     dim3 blockDim(16, 16);
     dim3 gridDim(0, 0);
 
-    float *d_m1;
-    float *d_m2;
-    float *d_res;
+    double *d_m1;
+    double *d_m2;
+    double *d_res;
 
     for (int l = 1; l < nn->number_of_layers; l++)
     {
@@ -159,26 +163,39 @@ void forward(ann_t *nn, double (*activation_function)(double))
         // float *d_res;
 
         // Memory allocation on the GPU
-        cudaMalloc((void **)&d_m1, nn->layers[l]->weights->rows * nn->layers[l]->weights->columns * sizeof(float));
-        cudaMalloc((void **)&d_m2, nn->layers[l-1]->activations->rows * nn->layers[l-1]->activations->columns * sizeof(float));
-        cudaMalloc((void **)&d_res, z1->rows * z1->columns * sizeof(float));
+        CHECK_ERROR(cudaMalloc((void **)&d_m1, nn->layers[l]->weights->rows * nn->layers[l]->weights->columns * sizeof(double)));
+        // cout << "cudaMalloc1" << endl;
+        CHECK_ERROR(cudaMalloc((void **)&d_m2, nn->layers[l-1]->activations->rows * nn->layers[l-1]->activations->columns * sizeof(double)));
+        // cout << "cudaMalloc2" << endl;
+        CHECK_ERROR(cudaMalloc((void **)&d_res, z1->rows * z1->columns * sizeof(double)));
+        // cout << "cudaMalloc3" << endl;
 
         // Copy from CPU memory to GPU
-        cudaMemcpy(d_m1, nn->layers[l]->weights->m, nn->layers[l]->weights->rows * nn->layers[l]->weights->columns * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_m2, nn->layers[l-1]->activations->m, nn->layers[l-1]->activations->rows * nn->layers[l-1]->activations->columns * sizeof(float), cudaMemcpyHostToDevice);
+        CHECK_ERROR(cudaMemcpy(d_m1, nn->layers[l]->weights->m, nn->layers[l]->weights->rows * nn->layers[l]->weights->columns * sizeof(double), cudaMemcpyHostToDevice));
+        // cout << "cudaMemcpy1" << endl;
+        CHECK_ERROR(cudaMemcpy(d_m2, nn->layers[l-1]->activations->m, nn->layers[l-1]->activations->rows * nn->layers[l-1]->activations->columns * sizeof(double), cudaMemcpyHostToDevice));
+        // cout << "cudaMemcpy2" << endl;
 
         // Launch kernel
-        gridDim = dim3((nn->layers[l-1]->activations->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->weights->rows + blockDim.y - 1) / blockDim.y);
+        // gridDim = dim3((nn->layers[l-1]->activations->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->weights->rows + blockDim.y - 1) / blockDim.y);
+        gridDim = dim3((z1->columns + blockDim.x - 1) / blockDim.x, (z1->rows + blockDim.y - 1) / blockDim.y);
         matrix_dot_cuda<<<gridDim, blockDim>>>(d_m1, d_m2, d_res, nn->layers[l]->weights->rows, nn->layers[l]->weights->columns, nn->layers[l-1]->activations->rows, nn->layers[l-1]->activations->columns); // z1 <- w^l x a^(l-1)
+        // cout << "cudaKernel" << endl;
 
-        cudaDeviceSynchronize();
+        CHECK_ERROR(cudaDeviceSynchronize());
+        // cout << "cudaDeviceSynchronize" << endl;
 
         // Copy from GPU memory to CPU
-        cudaMemcpy(z1->m, d_res, nn->layers[l]->weights->rows * nn->layers[l-1]->activations->columns * sizeof(float), cudaMemcpyDeviceToHost);
+        // CHECK_ERROR(cudaMemcpy(z1->m, d_res, nn->layers[l]->weights->rows * nn->layers[l-1]->activations->columns * sizeof(double), cudaMemcpyDeviceToHost));
+        CHECK_ERROR(cudaMemcpy(z1->m, d_res, z1->rows * z1->columns * sizeof(double), cudaMemcpyDeviceToHost));
+        // cout << "cudaMemcpy3" << endl;
 
-        cudaFree(d_m1);
-        cudaFree(d_m2);
-        cudaFree(d_res);
+        CHECK_ERROR(cudaFree(d_m1));
+        // cout << "cudaFree1" << endl;
+        CHECK_ERROR(cudaFree(d_m2));
+        // cout << "cudaFree2" << endl;
+        CHECK_ERROR(cudaFree(d_res));
+        // cout << "cudaFree3" << endl;
 
         // free(d_m1);
         // free(d_m2);
@@ -205,22 +222,24 @@ void forward(ann_t *nn, double (*activation_function)(double))
         // float *d_res;
 
         // Memory allocation on the GPU
-        cudaMalloc((void **)&d_m1, nn->layers[l]->biases->rows * nn->layers[l]->biases->columns * sizeof(float));
-        cudaMalloc((void **)&d_m2, one->rows * one->columns * sizeof(float));
-        cudaMalloc((void **)&d_res, z2->rows * z2->columns * sizeof(float));
+        cudaMalloc((void **)&d_m1, nn->layers[l]->biases->rows * nn->layers[l]->biases->columns * sizeof(double));
+        cudaMalloc((void **)&d_m2, one->rows * one->columns * sizeof(double));
+        cudaMalloc((void **)&d_res, z2->rows * z2->columns * sizeof(double));
 
         // Copy from CPU memory to GPU
-        cudaMemcpy(d_m1, nn->layers[l]->biases->m, nn->layers[l]->biases->rows * nn->layers[l]->biases->columns * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_m2, one->m, one->rows * one->columns * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_m1, nn->layers[l]->biases->m, nn->layers[l]->biases->rows * nn->layers[l]->biases->columns * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_m2, one->m, one->rows * one->columns * sizeof(double), cudaMemcpyHostToDevice);
 
         // Launch kernel
-        gridDim = dim3((one->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->biases->rows + blockDim.y - 1) / blockDim.y);
+        // gridDim = dim3((one->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->biases->rows + blockDim.y - 1) / blockDim.y);
+        gridDim = dim3((z2->columns + blockDim.x - 1) / blockDim.x, (z2->rows + blockDim.y - 1) / blockDim.y);
         matrix_dot_cuda<<<gridDim, blockDim>>>(d_m1, d_m2, d_res, nn->layers[l]->biases->rows, nn->layers[l]->biases->columns, one->rows, one->columns); // z2 <- b^l x 1
 
         cudaDeviceSynchronize();
 
         // Copy from GPU memory to CPU
-        cudaMemcpy(z2->m, d_res, nn->layers[l]->biases->rows * one->columns * sizeof(float), cudaMemcpyDeviceToHost);
+        // cudaMemcpy(z2->m, d_res, nn->layers[l]->biases->rows * one->columns * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(z2->m, d_res, z2->rows * z2->columns * sizeof(double), cudaMemcpyDeviceToHost);
 
         cudaFree(d_m1);
         cudaFree(d_m2);
@@ -241,12 +260,18 @@ void forward(ann_t *nn, double (*activation_function)(double))
     }
 
     cudaFree(d_m1);
+    // cout << "cudaFreeOut1" << endl;
     cudaFree(d_m2);
+    // cout << "cudaFreeOut2" << endl;
     cudaFree(d_res);
+    // cout << "cudaFreeOut3" << endl;
+
+    // cout << "ForwardEnd" << endl;
 }
 
 void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
 {
+    // cout << "BackwardStart" << endl;
     unsigned L = nn->number_of_layers-1;
 
     matrix_t *dfzL = alloc_matrix(nn->layers[L]->number_of_neurons, nn->minibatch_size);
@@ -260,9 +285,9 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
     dim3 blockDim(16, 16);
     dim3 gridDim(0, 0);
 
-    float *d_m1;
-    float *d_m2;
-    float *d_res;
+    double *d_m1;
+    double *d_m2;
+    double *d_res;
 
     for (int l = L; l > 1; l--)
     {
@@ -297,26 +322,37 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         // float *d_res;
 
         // Memory allocation on the GPU
-        cudaMalloc((void **)&d_m1, tw->rows * tw->columns * sizeof(float));
-        cudaMalloc((void **)&d_m2, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(float));
-        cudaMalloc((void **)&d_res, delta_tmp->rows * delta_tmp->columns * sizeof(float));
+        cudaMalloc((void **)&d_m1, tw->rows * tw->columns * sizeof(double));
+        // cout << "cudaMalloc1" << endl;
+        cudaMalloc((void **)&d_m2, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(double));
+        // cout << "cudaMalloc2" << endl;
+        cudaMalloc((void **)&d_res, delta_tmp->rows * delta_tmp->columns * sizeof(double));
+        // cout << "cudaMalloc3" << endl;
 
         // Copy from CPU memory to GPU
-        cudaMemcpy(d_m1, tw->m, tw->rows * tw->columns * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_m2, nn->layers[l]->delta->m, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_m1, tw->m, tw->rows * tw->columns * sizeof(double), cudaMemcpyHostToDevice);
+        // cout << "cudaMemcpy1" << endl;
+        cudaMemcpy(d_m2, nn->layers[l]->delta->m, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(double), cudaMemcpyHostToDevice);
+        // cout << "cudaMemcpy2" << endl;
 
         // Launch kernel
         gridDim = dim3((nn->layers[l]->delta->columns + blockDim.x - 1) / blockDim.x, (tw->rows + blockDim.y - 1) / blockDim.y);
         matrix_dot_cuda<<<gridDim, blockDim>>>(d_m1, d_m2, d_res, tw->rows, tw->columns, nn->layers[l]->delta->rows, nn->layers[l]->delta->columns);
+        // cout << "cudaKernel" << endl;
 
         cudaDeviceSynchronize();
+        // cout << "cudaDeviceSynchronize" << endl;
 
         // Copy from GPU memory to CPU
-        cudaMemcpy(delta_tmp->m, d_res, tw->rows * nn->layers[l]->delta->columns * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(delta_tmp->m, d_res, tw->rows * nn->layers[l]->delta->columns * sizeof(double), cudaMemcpyDeviceToHost);
+        // cout << "cudaMemcpy3" << endl;
 
         cudaFree(d_m1);
+        // cout << "cudaFree1" << endl;
         cudaFree(d_m2);
+        // cout << "cudaFree2" << endl;
         cudaFree(d_res);
+        // cout << "cudaFree3" << endl;
 
         // free(d_m1);
         // free(d_m2);
@@ -332,8 +368,11 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
     }
 
     cudaFree(d_m1);
+    // cout << "cudaFreeOut1" << endl;
     cudaFree(d_m2);
+    // cout << "cudaFreeOut2" << endl;
     cudaFree(d_res);
+    // cout << "cudaFreeOut3" << endl;
 
     for (int l = 1; l < nn->number_of_layers; l++)
     {
@@ -367,13 +406,13 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         // float *d_res;
 
         // Memory allocation on the GPU
-        cudaMalloc((void **)&d_m1, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(float));
-        cudaMalloc((void **)&d_m2, ta->rows * ta->columns * sizeof(float));
-        cudaMalloc((void **)&d_res, w1->rows * w1->columns * sizeof(float));
+        cudaMalloc((void **)&d_m1, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(double));
+        cudaMalloc((void **)&d_m2, ta->rows * ta->columns * sizeof(double));
+        cudaMalloc((void **)&d_res, w1->rows * w1->columns * sizeof(double));
 
         // Copy from CPU memory to GPU
-        cudaMemcpy(d_m1, nn->layers[l]->delta->m, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_m2, ta->m, ta->rows * ta->columns * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_m1, nn->layers[l]->delta->m, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_m2, ta->m, ta->rows * ta->columns * sizeof(double), cudaMemcpyHostToDevice);
 
         // Launch kernel
         gridDim = dim3((ta->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->delta->rows + blockDim.y - 1) / blockDim.y);
@@ -382,7 +421,7 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         cudaDeviceSynchronize();
 
         // Copy from GPU memory to CPU
-        cudaMemcpy(w1->m, d_res, nn->layers[l]->delta->rows * ta->columns * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(w1->m, d_res, nn->layers[l]->delta->rows * ta->columns * sizeof(double), cudaMemcpyDeviceToHost);
 
         cudaFree(d_m1);
         cudaFree(d_m2);
@@ -428,13 +467,13 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         // float *d_res;
 
         // Memory allocation on the GPU
-        cudaMalloc((void **)&d_m1, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(float));
-        cudaMalloc((void **)&d_m2, one->rows * one->columns * sizeof(float));
-        cudaMalloc((void **)&d_res, b1->rows * b1->columns * sizeof(float));
+        cudaMalloc((void **)&d_m1, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(double));
+        cudaMalloc((void **)&d_m2, one->rows * one->columns * sizeof(double));
+        cudaMalloc((void **)&d_res, b1->rows * b1->columns * sizeof(double));
 
         // Copy from CPU memory to GPU
-        cudaMemcpy(d_m1, nn->layers[l]->delta->m, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_m2, one->m, one->rows * one->columns * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_m1, nn->layers[l]->delta->m, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_m2, one->m, one->rows * one->columns * sizeof(double), cudaMemcpyHostToDevice);
 
         // Launch kernel
         gridDim = dim3((one->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->delta->rows + blockDim.y - 1) / blockDim.y);
@@ -443,7 +482,7 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         cudaDeviceSynchronize();
 
         // Copy from GPU memory to CPU
-        cudaMemcpy(b1->m, d_res, nn->layers[l]->delta->rows * one->columns * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(b1->m, d_res, nn->layers[l]->delta->rows * one->columns * sizeof(double), cudaMemcpyDeviceToHost);
 
         cudaFree(d_m1);
         cudaFree(d_m2);
@@ -464,4 +503,6 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
     cudaFree(d_m1);
     cudaFree(d_m2);
     cudaFree(d_res);
+
+    // cout << "BackwardEnd" << endl;
 }

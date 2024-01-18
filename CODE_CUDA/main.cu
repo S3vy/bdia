@@ -10,6 +10,10 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#include "error.h"
+
+#include <iostream>
+using namespace std;
 
 void populate_minibatch(double *x, double* y, unsigned* minibatch_idx, unsigned minibatch_size, image * img, unsigned img_size, byte* label, unsigned label_size);
 
@@ -88,28 +92,42 @@ void populate_minibatch(double * x, double * y, unsigned * minibatch_idx, unsign
 {
     for (int col = 0; col < minibatch_size; col ++)
     {
+        // cout << "bouclestart" << endl;
         for (int row = 0; row < img_size; row ++)
         {
+            // cout << row << endl;
+            // cout << col << endl;
+            /* cout << minibatch_size << endl;
+            cout << row * minibatch_size + col << endl;
+            cout << img[minibatch_idx[col]][row] << endl; */
+            // cout << "boucle1enter" << endl;
             x[row * minibatch_size + col] = (double) img[minibatch_idx[col]][row]/255.;
+            // cout << "xaccessok" << endl;
         }
-
+        // cout << "boucle1ok" << endl;
         for (int row = 0; row < 10; row ++)
         {
             y[row * minibatch_size + col] = 0.0;
         }
-
+        // cout << "boucle2ok" << endl;
         y[ label[minibatch_idx[col]] * minibatch_size + col] = 1.0;
+        // cout << "yok" << endl;
     }
+    // cout << "boucleok" << endl;
 }
 
 int main(int argc, char *argv[])
 {
     srand(time(0));
     unsigned datasize, ntest;
-    image* train_img = read_images("../DONNEES_MNIST/train-images.idx3-ubyte", &datasize);
-    byte* train_label = read_labels("../DONNEES_MNIST/train-labels.idx1-ubyte", &datasize);
-    image* test_img = read_images("../DONNEES_MNIST/t10k-images.idx3-ubyte", &ntest);
-    byte* test_label = read_labels("../DONNEES_MNIST/t10k-labels.idx1-ubyte", &ntest);
+    image* train_img = read_images("/home/pehladik/Desktop/Anthonin_Antoine/TP1/DONNEES_MNIST/train-images.idx3-ubyte", &datasize);
+    // cout << "testtrainimg" << endl;
+    // cout << datasize << endl;
+    // cout << train_img[5000][0] << endl;
+    byte* train_label = read_labels("/home/pehladik/Desktop/Anthonin_Antoine/TP1/DONNEES_MNIST/train-labels.idx1-ubyte", &datasize);
+    // cout << datasize << endl;
+    image* test_img = read_images("/home/pehladik/Desktop/Anthonin_Antoine/TP1/DONNEES_MNIST/t10k-images.idx3-ubyte", &ntest);
+    byte* test_label = read_labels("/home/pehladik/Desktop/Anthonin_Antoine/TP1/DONNEES_MNIST/t10k-labels.idx1-ubyte", &ntest);
 
     ann_t * nn;
     double alpha = 0.05;
@@ -119,26 +137,36 @@ int main(int argc, char *argv[])
     nn = create_ann(alpha, minibatch_size, number_of_layers, nneurons_per_layer);
     //print_nn(nn);
 
-    printf("starting accuracy %lf\n", accuracy(test_img, test_label, ntest, minibatch_size, nn));
+    // printf("starting accuracy %lf\n", accuracy(test_img, test_label, ntest, minibatch_size, nn));
 
     unsigned *shuffled_idx = (unsigned *)malloc(datasize*sizeof(unsigned));
     double *x = (double *) malloc(28*28 * minibatch_size * sizeof( double ));
     double *y = (double *) malloc(10 * minibatch_size * sizeof( double ));
     matrix_t *out = alloc_matrix(10, minibatch_size);
     
-    for (int epoch = 0; epoch < 40; epoch ++)
+    for (int epoch = 0; epoch < 2; epoch ++)
     {
         printf("start learning epoch %d\n", epoch);
 
+        // cout << datasize << endl;
         shuffle(shuffled_idx, datasize, datasize);
-
+        // cout << (unsigned) shuffled_idx[0] << endl;
+        // cout << train_img[shuffled_idx[0]][0] << endl;
+        // x[0] = (double) train_img[shuffled_idx[0]][0]/255.;
+        // cout << "test0" << endl;
         for (int i = 0; i < datasize - minibatch_size ; i+= minibatch_size)
         {
+            // cout << "populateminibatchstartMAIN" << endl;
             populate_minibatch(x, y, shuffled_idx+i, minibatch_size, train_img, 28*28, train_label, 10);
+            // cout << "populateminibatchendMAIN" << endl;
             memcpy(nn->layers[0]->activations->m, x, 28 * 28 * minibatch_size * sizeof(double));
+            // cout << "memcpyMAIN1" << endl;
             forward(nn, sigmoid);
-            memcpy(out->m, y, 10 * minibatch_size * sizeof(double));            
-            backward(nn, out, dsigmoid);            
+            // cout << "forwardMAIN" << endl;
+            memcpy(out->m, y, 10 * minibatch_size * sizeof(double)); 
+            // cout << "memcpyMAIN2" << endl;           
+            backward(nn, out, dsigmoid);  
+            // cout << "backwardMAIN" << endl;          
         }     
         printf("epoch %d accuracy %lf\n", epoch, accuracy(test_img, test_label, ntest, minibatch_size, nn));
     }

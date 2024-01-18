@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "matrix.h"
+#include "error.h"
 
 typedef struct 
 {
