@@ -1,4 +1,5 @@
 #include "matrix.h"
+#include "error.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -110,11 +111,69 @@ void matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res)
     }
 }
 
-__global__ void matrix_dot_cuda(float *m1, float *m2, float *res, int numM1Rows, int numM1Columns, int numM2Rows, int numM2Columns)
+__global__ void matrix_hadamard_product__cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+)
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
-    float sum = 0.0;
+
+    assert ( (numM1Rows == numM2Rows)  &&
+             (numM1Columns == numM1Columns));
+    
+    if (row < numM1Rows && col < numM1Columns) {
+        res[col + row * numM1Columns] = m1[col + row * numM1Columns] * m2[col + row * numM1Columns];
+    }
+}
+
+__global__ void matrix_sum_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    assert ( (numM1Rows == numM2Rows)  &&
+             (numM1Columns == numM1Columns));
+    
+    if (row < numM1Rows && col < numM1Columns) {
+        res[col + row * numM1Columns] = m1[col + row * numM1Columns] + m2[col + row * numM1Columns];
+    }
+}
+
+__global__ void matrix_minus_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    assert ( (numM1Rows == numM2Rows)  &&
+             (numM1Columns == numM1Columns));
+    
+    if (row < numM1Rows && col < numM1Columns) {
+        res[col + row * numM1Columns] = m1[col + row * numM1Columns] - m2[col + row * numM1Columns];
+    }
+}
+
+__global__ void matrix_dot_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+)
+{
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    double sum = 0.0;
+
+    assert (numM1Columns == numM2Rows) ;
+
 
     if (row < numM1Rows && col < numM2Columns) {
         for (int i = 0; i < numM1Columns; i++) {
