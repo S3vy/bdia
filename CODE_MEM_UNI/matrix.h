@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
+#include "error.h"
 
 typedef struct
 {
@@ -26,7 +27,11 @@ void matrix_minus(matrix_t *m1, matrix_t *m2, matrix_t *res);
 
 void matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res);
 
-__global__ void matrix_dot_cuda(   float *m1, float *m2, float *res, int numM1Rows, int numM1Columns, int numM2Rows, int numM2Columns);
+__global__ void matrix_dot_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+);
 
 void matrix_function(matrix_t *m1, double (*f)(double), matrix_t *res);
 

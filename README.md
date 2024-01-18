@@ -3,6 +3,7 @@ TP Centrale Nantes INFOIA GPGPU
 
 Comment compiler : gcc *.c -lm
 Utiliser cublas : nvcc tests_antho.cu -lcublas
+Le rapport overleaf latex : https://www.overleaf.com/7822131397tpkssvjjbshh#3edbfc
 
 1. Introduction (enjeu TP)
 2. Analyse du code séquentiel (prototype et algorithme des fonctions)

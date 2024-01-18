@@ -1,4 +1,5 @@
 #include "matrix.h"
+#include "error.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -6,7 +7,7 @@
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 matrix_t * alloc_matrix(unsigned rows, unsigned columns)
-{
+{   
     matrix_t * res = (matrix_t*) malloc( sizeof(matrix_t) );
     res->m = (double *) calloc(columns * rows, sizeof(double));
     res->columns = columns;
@@ -17,8 +18,8 @@ matrix_t * alloc_matrix(unsigned rows, unsigned columns)
 void destroy_matrix(matrix_t *m)
 {
     //printf("free %p %p\n", m, m->m);
-    free(m->m);
-    free(m);
+    cudaFree(m->m);
+    cudaFree(m);
 }
 
 void print_matrix(matrix_t *m, bool is_short){
@@ -110,11 +111,15 @@ void matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res)
     }
 }
 
-__global__ void matrix_dot_cuda(float *m1, float *m2, float *res, int numM1Rows, int numM1Columns, int numM2Rows, int numM2Columns)
+__global__ void matrix_dot_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+)
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
-    float sum = 0.0;
+    double sum = 0.0;
 
     if (row < numM1Rows && col < numM2Columns) {
         for (int i = 0; i < numM1Columns; i++) {

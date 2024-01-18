@@ -15,7 +15,7 @@
 #include <iostream>
 using namespace std;
 
-void populate_minibatch(double *x, double* y, unsigned* minibatch_idx, unsigned minibatch_size, image * img, unsigned img_size, byte* label, unsigned label_size);
+void populate_minibatch(double *x, double* y, unsigned* minibatch_idx, unsigned minibatch_size, image * img, unsigned img_size, uint8_t* label, unsigned label_size);
 
 void zero_to_n(unsigned n, unsigned* t)
 {
@@ -48,7 +48,7 @@ double dsigmoid(double x)
     return sigmoid(x)*(1-sigmoid(x));
 }
 
-double accuracy(image* test_img, byte* test_label, unsigned datasize, unsigned minibatch_size, ann_t *nn)
+double accuracy(image* test_img, uint8_t* test_label, unsigned datasize, unsigned minibatch_size, ann_t *nn)
 {
     unsigned good = 0;
     unsigned idx[datasize];    
@@ -88,7 +88,7 @@ double accuracy(image* test_img, byte* test_label, unsigned datasize, unsigned m
     return (100.0* (double) (good) / ntests );
 }
 
-void populate_minibatch(double * x, double * y, unsigned * minibatch_idx, unsigned minibatch_size, image * img, unsigned img_size, byte* label, unsigned label_size)
+void populate_minibatch(double * x, double * y, unsigned * minibatch_idx, unsigned minibatch_size, image * img, unsigned img_size, uint8_t* label, unsigned label_size)
 {
     for (int col = 0; col < minibatch_size; col ++)
     {
@@ -120,14 +120,14 @@ int main(int argc, char *argv[])
 {
     srand(time(0));
     unsigned datasize, ntest;
-    image* train_img = read_images("/home/pehladik/Desktop/Anthonin_Antoine/TP1/DONNEES_MNIST/train-images.idx3-ubyte", &datasize);
+    image* train_img = read_images("../DONNEES_MNIST/train-images.idx3-ubyte", &datasize);
     // cout << "testtrainimg" << endl;
     // cout << datasize << endl;
     // cout << train_img[5000][0] << endl;
-    byte* train_label = read_labels("/home/pehladik/Desktop/Anthonin_Antoine/TP1/DONNEES_MNIST/train-labels.idx1-ubyte", &datasize);
+    uint8_t* train_label = read_labels("../DONNEES_MNIST/train-labels.idx1-ubyte", &datasize);
     // cout << datasize << endl;
-    image* test_img = read_images("/home/pehladik/Desktop/Anthonin_Antoine/TP1/DONNEES_MNIST/t10k-images.idx3-ubyte", &ntest);
-    byte* test_label = read_labels("/home/pehladik/Desktop/Anthonin_Antoine/TP1/DONNEES_MNIST/t10k-labels.idx1-ubyte", &ntest);
+    image* test_img = read_images("../DONNEES_MNIST/t10k-images.idx3-ubyte", &ntest);
+    uint8_t* test_label = read_labels("../DONNEES_MNIST/t10k-labels.idx1-ubyte", &ntest);
 
     ann_t * nn;
     double alpha = 0.05;
