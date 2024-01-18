@@ -41,4 +41,19 @@ void matrix_scalar(matrix_t *m1, double s, matrix_t *res);
 
 void matrix_memcpy(matrix_t *dest, const matrix_t *src);
 
+__global__ void matrix_hadamard_product__cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns ) ;
+
+__global__ void matrix_minus_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns );
+
+__global__ void matrix_sum_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns );
+
 #endif

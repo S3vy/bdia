@@ -9,7 +9,7 @@
 
 //#include "bitmap_image.hpp"
 
-typedef uint8_t byte;
+//typedef uint8_t byte;
 typedef byte image[28*28];
 
 uint32_t make_uint32(byte buffer[]);
