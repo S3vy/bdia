@@ -111,7 +111,7 @@ void matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res)
     }
 }
 
-__global__ void matrix_hadamard_product__cuda
+__global__ void matrix_hadamard_product_cuda
 (   double *m1, double *m2, double *res,
     int numM1Rows, int numM1Columns,
     int numM2Rows, int numM2Columns

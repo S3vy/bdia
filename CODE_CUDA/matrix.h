@@ -27,6 +27,24 @@ void matrix_minus(matrix_t *m1, matrix_t *m2, matrix_t *res);
 
 void matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res);
 
+__global__ void matrix_hadamard_product_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+);
+
+__global__ void matrix_sum_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+);
+
+__global__ void matrix_minus_cuda
+(   double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+);
+
 __global__ void matrix_dot_cuda
 (   double *m1, double *m2, double *res,
     int numM1Rows, int numM1Columns,
