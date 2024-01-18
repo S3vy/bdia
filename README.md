@@ -112,7 +112,7 @@ void        backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(doubl
 
 ### Identification des gisements de performance
 
-Les résultats du profilage ci-dessous permettent d'établir une liste des gisements de performance par priorité.
+Les résultats du profilage ci-dessus permettent d'établir une liste des gisements de performance par priorité.
 
 Priorité n°1 : matrix_dot
     Le produit matriciel représente 91,4% du temps total d'exécution du programme. On retrouve souvent cette opération dans les gisements de performance et elle est facilement portable sur GPU.
@@ -120,4 +120,4 @@ Priorité n°1 : matrix_dot
 Priorité n°2 : matrix_minus, matrix_scalar, matrix_transpose, populate_minibatch
     Ces opérations (principalement sur les matrices) représentent un total de 8,31% du temps total d'exécution du programme.
 
-Nous allons porter nos efforts sur ces deux priorités mais il conviendra de vérifier que le gain en complexité est réel puisque le portage d'opérations sur GPU nécessite l'utilisation (a priori absente) de transferts mémoire coûteux.
+Nous allons porter nos efforts sur ces deux priorités mais il conviendra de vérifier que le gain en complexité est réel puisque le portage d'opérations sur GPU nécessite l'utilisation de transferts mémoire coûteux, absents du code séquentiel initial.
