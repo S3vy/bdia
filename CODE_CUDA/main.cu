@@ -96,11 +96,6 @@ void populate_minibatch(double * x, double * y, unsigned * minibatch_idx, unsign
         for (int row = 0; row < img_size; row ++)
         {
             // cout << row << endl;
-            // cout << col << endl;
-            /* cout << minibatch_size << endl;
-            cout << row * minibatch_size + col << endl;
-            cout << img[minibatch_idx[col]][row] << endl; */
-            // cout << "boucle1enter" << endl;
             x[row * minibatch_size + col] = (double) img[minibatch_idx[col]][row]/255.;
             // cout << "xaccessok" << endl;
         }

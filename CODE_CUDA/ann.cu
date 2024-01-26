@@ -122,7 +122,6 @@ void print_nn(ann_t *nn)
 
 void forward(ann_t *nn, double (*activation_function)(double))
 {
-    // cout << "ForwardStart" << endl;
     dim3 blockDim(16, 16);
     dim3 gridDim(0, 0);
 
@@ -144,15 +143,16 @@ void forward(ann_t *nn, double (*activation_function)(double))
         // matrix_dot(nn->layers[l]->weights, nn->layers[l-1]->activations, z1); // z1 <- w^l x a^(l-1)
         // matrix_dot(nn->layers[l]->biases, one, z2); // z2 <- b^l x 1
 
+        // CUDA version
+
+        // Memory allocation on the GPU
         CHECK_ERROR(cudaMalloc((void **)&d_m1, nn->layers[l]->weights->rows * nn->layers[l]->weights->columns * sizeof(double)));
         CHECK_ERROR(cudaMalloc((void **)&d_m2, nn->layers[l-1]->activations->rows * nn->layers[l-1]->activations->columns * sizeof(double)));
         CHECK_ERROR(cudaMalloc((void **)&d_res_1, z1->rows * z1->columns * sizeof(double)));
 
         // Copy from CPU memory to GPU
         CHECK_ERROR(cudaMemcpy(d_m1, nn->layers[l]->weights->m, nn->layers[l]->weights->rows * nn->layers[l]->weights->columns * sizeof(double), cudaMemcpyHostToDevice));
-        // cout << "cudaMemcpy1" << endl;
         CHECK_ERROR(cudaMemcpy(d_m2, nn->layers[l-1]->activations->m, nn->layers[l-1]->activations->rows * nn->layers[l-1]->activations->columns * sizeof(double), cudaMemcpyHostToDevice));
-        // cout << "cudaMemcpy2" << endl;
 
         // Launch kernel
         gridDim = dim3((nn->layers[l-1]->activations->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->weights->rows + blockDim.y - 1) / blockDim.y);
@@ -161,7 +161,6 @@ void forward(ann_t *nn, double (*activation_function)(double))
         // cout << "cudaKernel" << endl;
 
         CHECK_ERROR(cudaDeviceSynchronize());
-        // cout << "cudaDeviceSynchronize" << endl;
 
         // Copy from GPU memory to CPU
         CHECK_ERROR(cudaMemcpy(z1->m, d_res_1, z1->rows * z1->columns * sizeof(double), cudaMemcpyDeviceToHost));
@@ -260,7 +259,6 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         // CPU version        
         // matrix_dot(tw, nn->layers[l]->delta, delta_tmp); // (w^l)T x delta^l
 
-
         cudaMalloc((void **)&d_m1, tw->rows * tw->columns * sizeof(double));
         cudaMalloc((void **)&d_m2, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(double));  
         cudaMalloc((void **)&d_res, delta_tmp->rows * delta_tmp->columns * sizeof(double));
@@ -317,25 +315,7 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         // CPU version
         // matrix_dot(nn->layers[l]->delta, ta, w1); // w1 <- delta^l x (a^(l-1))^T
 
-        // CUDA version 1
-        // Allocation de mémoire unifiée
-        // cudaMallocManaged(&w1->m, w1->rows * w1->columns * sizeof(float));
-        // cudaMallocManaged(&nn->layers[l]->delta->m, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(float));
-        // cudaMallocManaged(&ta->m, ta->rows * ta->columns * sizeof(float));
-        // Définition de la configuration des blocks et des threads
-        // dim3 threadsPerBlock(32,32);
-        // dim3 numBlocks((w1->columns + threadsPerBlock.x - 1) / threadsPerBlock.x, (w1->rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
-        // Appel du kernel
-        // matrix_dot_cuda<<<numBlocks, threadsPerBlock>>>(nn->layers[l]->delta, ta, w1);
-        // Synchronisation pour s'assurer que le kernel a terminé
-        // cudaDeviceSynchronize();
-        // Libération de la mémoire unifiée
-        // cudaFree(w1->m);
-
-        // CUDA version 2
-        // float *d_m1;
-        // float *d_m2;
-        // float *d_res;
+        // CUDA version
 
         // Memory allocation on the GPU
         cudaMalloc((void **)&d_m1, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(double));
@@ -359,9 +339,6 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         cudaFree(d_m2);
         cudaFree(d_res);
 
-        // free(d_m1);
-        // free(d_m2);
-        // free(d_res);
         // END CUDA PART
 
         matrix_scalar(w1, nn->alpha / nn->minibatch_size, w1); // w1 <- alpha /m . delta^l x (a^(l-1))^T
@@ -379,24 +356,7 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         // CPU version
         // matrix_dot(nn->layers[l]->delta, one, b1); // b1 <- delta^l x 1^T
 
-        // CUDA version 1
-        // Allocation de mémoire unifiée
-        // cudaMallocManaged(&b1->m, b1->rows * b1->columns * sizeof(float));
-        // cudaMallocManaged(&nn->layers[l]->delta->m, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(float));
-        // cudaMallocManaged(&one->m, one->rows * one->columns * sizeof(float));
-        // Définition de la configuration des blocks et des threads
-        // numBlocks = (b1->columns + threadsPerBlock.x - 1) / threadsPerBlock.x, (b1->rows + threadsPerBlock.y - 1) / threadsPerBlock.y;
-        // Appel du kernel
-        // matrix_dot_cuda<<<numBlocks, threadsPerBlock>>>(nn->layers[l]->delta, one, b1);
-        // Synchronisation pour s'assurer que le kernel a terminé
-        // cudaDeviceSynchronize();
-        // Libération de la mémoire unifiée
-        // cudaFree(b1->m);
-
-        // CUDA version 2
-        // float *d_m1;
-        // float *d_m2;
-        // float *d_res;
+        // CUDA version
 
         // Memory allocation on the GPU
         cudaMalloc((void **)&d_m1, nn->layers[l]->delta->rows * nn->layers[l]->delta->columns * sizeof(double));
@@ -420,9 +380,6 @@ void backward(ann_t *nn, matrix_t *y, double (*derivative_actfunct)(double))
         cudaFree(d_m2);
         cudaFree(d_res);
 
-        // free(d_m1);
-        // free(d_m2);
-        // free(d_res);
         // END CUDA PART
 
         matrix_scalar(b1,  nn->alpha / nn->minibatch_size, b1); // b1 <- alpha / m . delta^l x 1^T
