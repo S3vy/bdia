@@ -5,6 +5,7 @@
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
+# define tileSize 32
 
 matrix_t * alloc_matrix(unsigned rows, unsigned columns)
 {
@@ -111,7 +112,7 @@ void matrix_dot(matrix_t *m1, matrix_t *m2, matrix_t *res)
     }
 }
 
-__global__ void matrix_hadamard_product_cuda
+__global__ void hadamard_product_cuda
 (   double *m1, double *m2, double *res,
     int numM1Rows, int numM1Columns,
     int numM2Rows, int numM2Columns
@@ -184,6 +185,68 @@ __global__ void matrix_dot_cuda
     }
 }
 
+__global__ void matrix_dot_tile_cuda
+(
+    double *m1, double *m2, double *res,
+    int numM1Rows, int numM1Columns,
+    int numM2Rows, int numM2Columns
+)
+{
+    // Defining shared memory workspaces
+    __shared__ float ds_m1 [ tileSize ][ tileSize ];
+    __shared__ float ds_m2 [ tileSize ][ tileSize ];
+
+    // Redefinition of blockIdx.x, blockIdx.y,
+    // threadIdx.x and threadIdx.y to simplify writing
+    int bx = blockIdx.x; int by = blockIdx.y;
+    int tx = threadIdx.x; int ty = threadIdx.y;
+
+    // Definition of row and col
+    int row = by * blockDim.y + ty;
+    int col = bx * blockDim.x + tx;
+
+    // intermediate variable for calculating the sum of products
+    float pvalue = 0.0;
+
+    // Loop over the m1 and m2 tiles required to compute the P element
+    for (int p = 0; p < numM1Columns / tileSize + 1 ; p ++) {
+        // collaborative loading of M and N tiles into shared memory
+        if ( row < numM1Rows && p * tileSize + tx < numM1Columns )
+        { 
+            ds_m1 [ty][tx] = m1[row * numM1Columns + p * tileSize + tx]; 
+        }
+        else
+        { 
+            ds_m1 [ty][tx] = 0.0; 
+        }
+        if (p * tileSize + ty < numM2Rows && col < numM2Columns )
+        {
+            ds_m2 [ty][tx] = m2[(p * tileSize + ty) * numM2Columns + col]; 
+        }
+        else
+        { 
+            ds_m2 [ty][tx] = 0.0;   
+        }
+
+        __syncthreads();
+
+        if ( row < numM1Rows && col < numM2Columns )
+        {
+            for (int k = 0; k < tileSize ; k ++)
+            {
+                pvalue += ds_m1 [ty][k] * ds_m2 [k][tx];
+            }
+        }
+
+        __syncthreads();
+
+    }
+
+    if ( row < numM1Rows && col < numM2Columns )
+        { res[ row * numM2Columns + col ] = pvalue ; }
+
+}
+
 void matrix_function(matrix_t *m1, double (*f)(double), matrix_t *res)
 {
     assert ( (m1->columns == res->columns) &&             
@@ -227,3 +290,4 @@ void matrix_memcpy(matrix_t *dest, const matrix_t *src)
 
     memcpy(dest->m, src->m, src->columns * src->rows * sizeof(double));     
 }
+
