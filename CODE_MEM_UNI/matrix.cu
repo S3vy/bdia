@@ -8,8 +8,12 @@
 
 matrix_t * alloc_matrix(unsigned rows, unsigned columns)
 {   
+    double *m;
     matrix_t * res = (matrix_t*) malloc( sizeof(matrix_t) );
-    res->m = (double *) calloc(columns * rows, sizeof(double));
+    // res->m = (double *) calloc(columns * rows, sizeof(double))
+    cudaMallocManaged(&m, rows*columns*sizeof(double));
+    cudaMemset(m,0,rows*columns*sizeof(double));
+    res->m = m;
     res->columns = columns;
     res->rows = rows;
     return res;

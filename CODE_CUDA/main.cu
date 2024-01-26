@@ -120,6 +120,7 @@ int main(int argc, char *argv[])
 {
     srand(time(0));
     unsigned datasize, ntest;
+    cout<<"Début du main"<<endl;
     image* train_img = read_images("../DONNEES_MNIST/train-images.idx3-ubyte", &datasize);
     // cout << "testtrainimg" << endl;
     // cout << datasize << endl;
@@ -143,7 +144,7 @@ int main(int argc, char *argv[])
     double *x = (double *) malloc(28*28 * minibatch_size * sizeof( double ));
     double *y = (double *) malloc(10 * minibatch_size * sizeof( double ));
     matrix_t *out = alloc_matrix(10, minibatch_size);
-    
+    cout<<"Début des épochs"<<endl;
     for (int epoch = 0; epoch < 2; epoch ++)
     {
         printf("start learning epoch %d\n", epoch);
