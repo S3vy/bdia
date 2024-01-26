@@ -1,5 +1,4 @@
-# bdia
-TP Centrale Nantes INFOIA GPGPU
+# TP Centrale Nantes INFOIA GPGPU
 
 Ce README.md est un document qui nous a servi de support originel pour notre réfléxion sur ce TP, il contient quelques débuts d'analyse, la manière dont nous avons envisagé la retranscription de nos avancées ainsi que les lignes de commandes utiles pour exécuter nos programmes.
 
