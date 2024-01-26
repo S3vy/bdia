@@ -126,13 +126,15 @@ void forward(ann_t *nn, double (*activation_function)(double))
     dim3 blockDim(16, 16);
     dim3 gridDim(0, 0);
 
-    double *d_m1;
-    double *d_m2;
-    double *d_res;
+    double *m1;
+    double *m2;
+    double *res;
 
     for (int l = 1; l < nn->number_of_layers; l++)
     {
         matrix_t *z1 = alloc_matrix(nn->layers[l]->number_of_neurons, nn->minibatch_size);
+        for (int idx = 0; idx < z1->columns*z1->rows;idx++)
+            z1->m[idx] = nn->layers[l]->weights->m[idx];
         matrix_t *z2 = alloc_matrix(nn->layers[l]->number_of_neurons, nn->minibatch_size);
         matrix_t *one = alloc_matrix(1, nn->minibatch_size);
         for (int idx = 0; idx < one->columns*one->rows; idx++)
@@ -140,20 +142,27 @@ void forward(ann_t *nn, double (*activation_function)(double))
 
         // Calcul sur GPU
             //allocation des matrices
-        cudaMallocManaged((void **)&d_m1, nn->layers[l]->weights->rows * nn->layers[l]->weights->columns * sizeof(double)));
-            // Définition des paramètres
-        dim3 threadsPerBlock(32,32);
-        dim3 numBlocks((z1->columns + threadsPerBlock.x - 1) / threadsPerBlock.x, (z1->rows + threadsPerBlock.y - 1) / threadsPerBlock.y);
+        // cudaMallocManaged(&m1, nn->layers[l]->weights->rows * nn->layers[l]->weights->columns * sizeof(double));
+        // cudaMallocManaged(&m2, nn->layers[l-1]->activations->rows * nn->layers[l-1]->activations->columns * sizeof(double));
+        // cudaMallocManaged(&res12, z1->rows * z1->columns * sizeof(double));
+        // cudaMallocManaged(&res2ones)
 
             // Launch Kernel
+        // z1 <- w^l x a^(l-1)
+        gridDim = dim3((z1->columns + blockDim.x - 1) / blockDim.x, (z1->rows + blockDim.y - 1) / blockDim.y);
+        matrix_dot_cuda<<<gridDim, blockDim>>>(nn->layers[l]->weights->m, nn->layers[l-1]->activations->m, z1->m,nn->layers[l]->weights->rows,nn->layers[l]->weights->columns,nn->layers[l-1]->activations->rows,nn->layers[l-1]->activations->columns);
+        cudaDeviceSynchronize();
+
+        // z2 <- b^l x 1  
         gridDim = dim3((one->columns + blockDim.x - 1) / blockDim.x, (nn->layers[l]->biases->rows + blockDim.y - 1) / blockDim.y);
-        matrix_dot_cuda<<<gridDim, blockDim>>>(d_m1, d_m2, d_res, nn->layers[l]->biases->rows, nn->layers[l]->biases->columns, one->rows, one->columns); // z2 <- b^l x 1
+        matrix_dot_cuda<<<gridDim, blockDim>>>(nn->layers[l]->biases->m, one->m, z2->m, nn->layers[l]->biases->rows, nn->layers[l]->biases->columns, one->rows, one->columns); // z2 <- b^l x 1
+        cudaDeviceSynchronize();
 
-        matrix_dot_cuda(nn->layers[l]->weights, nn->layers[l-1]->activations, z1); // z1 <- w^l x a^(l-1)
-        matrix_dot_cuda(nn->layers[l]->biases, one, z2); // z2 <- b^l x 1        
-        matrix_sum(z1, z2, nn->layers[l]->z); // z^l <- z1 + z2 <=> z^l <- w^l x a^(l-1) + b^l x 1   
+        // z^l <- z1 + z2 <=> z^l <- w^l x a^(l-1) + b^l x 1
+        matrix_sum(z1, z2, nn->layers[l]->z);
 
-        matrix_function(nn->layers[l]->z, activation_function, nn->layers[l]->activations); // a^l = f(z^l)
+        // a^l = f(z^l)
+        matrix_function(nn->layers[l]->z, activation_function, nn->layers[l]->activations);
      
         destroy_matrix(z1);
         destroy_matrix(z2);

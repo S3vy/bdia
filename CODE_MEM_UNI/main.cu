@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 {
     srand(time(0));
     unsigned datasize, ntest;
-    image* train_img = read_images("../DONNEES_MNIST/t10k-images.idx3-ubyte", &datasize);
+    image* train_img = read_images("../DONNEES_MNIST/train-images.idx3-ubyte", &datasize);
     uint8_t* train_label = read_labels("../DONNEES_MNIST/train-labels.idx1-ubyte", &datasize);
     image* test_img = read_images("../DONNEES_MNIST/t10k-images.idx3-ubyte", &ntest);
     uint8_t* test_label = read_labels("../DONNEES_MNIST/t10k-labels.idx1-ubyte", &ntest);

@@ -120,10 +120,11 @@ int main(int argc, char *argv[])
 {
     srand(time(0));
     unsigned datasize, ntest;
+
     image* train_img = read_images("../DONNEES_MNIST/train-images.idx3-ubyte", &datasize);
     // cout << "testtrainimg" << endl;
     // cout << datasize << endl;
-    // cout << train_img[5000][0] << endl;
+    // cout << train_img[5000][0] << endl;F
     uint8_t* train_label = read_labels("../DONNEES_MNIST/train-labels.idx1-ubyte", &datasize);
     // cout << datasize << endl;
     image* test_img = read_images("../DONNEES_MNIST/t10k-images.idx3-ubyte", &ntest);
@@ -143,7 +144,6 @@ int main(int argc, char *argv[])
     double *x = (double *) malloc(28*28 * minibatch_size * sizeof( double ));
     double *y = (double *) malloc(10 * minibatch_size * sizeof( double ));
     matrix_t *out = alloc_matrix(10, minibatch_size);
-    
     for (int epoch = 0; epoch < 2; epoch ++)
     {
         printf("start learning epoch %d\n", epoch);
