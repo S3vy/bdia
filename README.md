@@ -1,6 +1,20 @@
 # bdia
 TP Centrale Nantes INFOIA GPGPU
 
+Ce README.md est un document qui nous a servi de support originel pour notre réfléxion sur ce TP, il contient quelques débuts d'analyse, la manière dont nous avons envisagé la retranscription de nos avancées ainsi que les lignes de commandes utiles pour exécuter nos programmes.
+
+Ce fichier est aussi l'occasion d'expliciter la structure du git en lui même.
+Il y a 4 dossiers :
+CODE_CUBLAS : qui fut utile au tout début du TP quand nous avons envisager d'utiliser la librairie CUBLAS avant de nous résigner face à nos difficultés de manier cette dernière
+CODE_CUDA : il contient le code fonctionnant avec la première et la deuxième version de "matrix_dot_cuda"
+CODE_MEM_UNI : il contient le code fonctionnant avec la mémoire unifiée
+CODE_PROF : il contient le code fourni au début du TP et il nous a servi de référence pour adapter le notre
+DONNEES_MNIST : il contient les données MNSIT afin de réaliser l'entrainement du réseaux de neurones
+Chaque dossier (hormis DONNEES_MNSIT) contient un code fonctionnel qu'il suffit d'éxécuter avce la commande bash suivante (lorsque l'invite de commade se trouve dans le dossier en question) : nvcc *.cu -lm (ou gcc *.c -lm pour CODE_PROF)
+Pourquoi cette structure ? La réponse est en partie dans la ligne précédente mais également parce que cela nous facilitait la mise à jour du repository en lui-même : chacun a pu travail dans un dossier sans contaminer ceux des autres, évitant ainsi de nombreux conflits de résolutions de ces derniers.
+
+# Une partie de notre travail sur ce projet :
+
 Comment compiler : gcc *.c -lm
 Utiliser cublas : nvcc tests_antho.cu -lcublas
 Le rapport overleaf latex : https://www.overleaf.com/7822131397tpkssvjjbshh#3edbfc
